@@ -5,16 +5,22 @@ import time
 from time import sleep
 
 # ===========================================================================
-# Example Code
+# Musique (sans thread timer)
 # ===========================================================================
 
+#Paramètres généraux et/ou globaux
 ServoMin=[150,150,150,150,150,150]
 ServoMax=[600,600,600,600,600,600] # Min pulse length out of 4096
 Init=[400,450,350,450,400,400]  #actual value of the impulsion of each servo
 channel=[2,4,6,8,10,12]			#where pins are plugged
 pwm.setPWMFreq(60)              # Set frequency to 60 Hz
 
+Actu=[0,0,0,0,0,0]
 
+#Paramètres musiquaux
+DefautMus=[400,450,350,450,400,400]
+VarFrap=100
+	
 def pause():
   sleep(0.01)
  
@@ -88,15 +94,26 @@ def init(Channel,Target):
 		pwm.setPWM(Channel[i],0,Target[i])
 	print "Init OK"
 
-	
-	
+def Frappe(direction):
+	global DefautMus
+	global VarFrap
+	global Actu
+	if direction=="gauche":
+		CibleSeul=DefautMus[channel[5-1]]-VarFrap #Pas sûr pour le -, sera p'tet plus
+	else:
+		CibleSeul=DefautMus[channel[5-1]]-VarFrap #Pas sûr pour le +, sera p'tet -
+	#Pos du futur timer
+	CommandControlUnique(channel[5-1],Actu[channel[5-1]],CibleSeul)
+	Actu[channel[5-1]] = CibleSeul
+	CommandControlUnique(channel[5-1],Actu[channel[5-1]],DefautMus[channel[5-1]])
+	Actu[channel[5-1]] = DefautMus[channel[5-1]]
 ##Main
 
 # Initialise the PWM device using the default address
 pwm = PWM(0x40, debug=True)
 
 init(channel,Init) #To initialize the servos
-Acu=Init
+Actu=Init
 
 while (True):
 	choix=input("Voulez-vous controler tous les moteurs (1) ou un a la fois (0) (2 = un brute): ")
