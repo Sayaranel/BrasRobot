@@ -2,40 +2,22 @@
 
 from Adafruit_PWM_Servo_Driver import PWM
 import time
-#import numpy as np
 from time import sleep
 
 # ===========================================================================
 # Example Code
 # ===========================================================================
 
-# Initialise the PWM device using the default address
-# bmp = PWM(0x40, debug=True)
-pwm = PWM(0x40, debug=True)
-
-servoMin = 150  # Min pulse length out of 4096
-servoMax = 600  # Max pulse length out of 4096
-
-actu=[400,450,350,450,400,400]  #actual value of the impulsion of each servo
-valeur = actu					#value to reach (initialized at actu)
-channel=[1,2,3,4,5,6]			#number of the pin
-pwm.setPWMFreq(60)                        # Set frequency to 60 Hz
-cible = 0
+ServoMin=[150,150,150,150,150,150]
+ServoMax=[600,600,600,600,600,600] # Min pulse length out of 4096
+Init=[400,450,350,450,400,400]  #actual value of the impulsion of each servo
+channel=[2,4,6,8,10,12]			#where pins are plugged
+pwm.setPWMFreq(60)              # Set frequency to 60 Hz
 
 
 def pause():
   sleep(0.01)
-def setServoPulse(channel, pulse):
-  pulseLength = 1000000                   # 1,000,000 us per second
-  pulseLength /= 60                       # 50 Hz
-  print "%d us per period" % pulseLength
-  pulseLength /= 4096                     # 12 bits of resolutioni
-
-  print "%d us per bit" % pulseLength
-  pulse *= 1000
-  pulse /= pulseLength
-  #pwm.setPWM(channel, 0, pulse)
-
+ 
 def TestEgList(A,B,nbr):
 	Counter=0
 	for i in range (0,nbr-1):
@@ -103,45 +85,35 @@ def CommandControlUnique(Channel,Actu,Target):
 
 def init(Channel,Target):
 	for i in range(0,6):
-		a=2*Channel[i]
-		b=Target[i]
-		pwm.setPWM(a,0,b)
+		pwm.setPWM(Channel[i],0,Target[i])
 	print "Init OK"
 
-init(channel,actu) #To initialize the servos
+	
+	
+##Main
+
+# Initialise the PWM device using the default address
+pwm = PWM(0x40, debug=True)
+
+init(channel,Init) #To initialize the servos
+Acu=Init
 
 while (True):
-  #cible = input("Element a controler :")
-  choix=input("Voulez-vous controler tous les moteurs (1) ou un a la fois (0) (2 = un brute): ")
-  if(choix==1):
-    for i in range(0,6):
-	  valeur[i] = input("Prochaine valeur a atteindre du moteur %d : " %channel[i])
-    CommandControlAll(actu,valeur)
-  else:
-	if(choix==0):
-		cible = input("Element a controler : ")
-		temp = input("Prochaine valeur a atteindre du moteur %d : " %cible)
-		a = actu[cible-1]
-		CommandControlUnique(2*cible,a,temp)
-		valeur[cible-1]=temp
+	choix=input("Voulez-vous controler tous les moteurs (1) ou un a la fois (0) (2 = un brute): ")
+	if(choix==1):
+		for i in range(0,6):
+			valeur[i] = input("Prochaine valeur a atteindre du moteur %d (%d - %d) : " %(channel[i],ServoMin[i-1],ServoMax[i-1])
+		CommandControlAll(actu,valeur)
+		actu=valeur
 	else:
-		cible = input("Element a controler : ")
-		temp = input("Prochaine valeur a atteindre du moteur %d : " %cible)
-		pwm.setPWM(2*cible,0,temp)
-		valeur[cible-1]=temp
-  #setServoPulse(0,valeur)  
-  actu=valeur
-  #pwm.setPWM(cible,0,valeur)
-
-
-
-
-
-
-#  # Change speed of continuous servo on channel O
-#  pwm.setPWM(0, 0, servoMin)
-#  time.sleep(1)
-#  pwm.setPWM(0, 0, servoMax)
-#  time.sleep(1)
-
+		if(choix==0):
+			cible = input("Element a controler : ")
+			temp = input("Prochaine valeur a atteindre du moteur %d (%d - %d): " %(cible,ServoMin[i-1],ServoMax[i-1])
+			CommandControlUnique(channel[i],actu[i-1],temp)
+			actu[cible-1]=temp
+		else:
+			cible = input("Element a controler : ")
+			temp = input("Prochaine valeur a atteindre du moteur %d (%d - %d): " %(cible,ServoMin[i-1],ServoMax[i-1])
+			pwm.setPWM(2*cible,0,temp)
+			actu[cible-1]=temp
 
