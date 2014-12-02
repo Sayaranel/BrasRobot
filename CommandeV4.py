@@ -8,31 +8,42 @@ from time import sleep
 # Musique (sans thread timer)
 # ===========================================================================
 
-#Paramètres généraux et/ou globaux
-ServoMin=[150,150,150,150,150,150]
-ServoMax=[600,600,600,600,600,600] # Min pulse length out of 4096
+#Parametres generaux et/ou globaux
+ServoMin=[130,230,230,180,145,200]
+ServoMax=[630,690,580,630,660,660] # Min pulse length out of 4096
 Init=[400,450,350,450,400,400]  #actual value of the impulsion of each servo
 channel=[2,4,6,8,10,12]			#where pins are plugged
-pwm.setPWMFreq(60)              # Set frequency to 60 Hz
+PWMFreq = 60					# Set frequency to 60 Hz           
 
 Actu=[0,0,0,0,0,0]
 
-#Paramètres musiquaux
-DefautMus=[400,450,350,450,400,400]
+#Parametres musiquaux
+PosFrap=[400,450,350,450,400,400]
+PosPivot=[400,450,350,450,400,400]
+PosVal1=[150,0,250,0,350,0,450,0,550]
+#PosVal1 pour 4 bouteilles, si cela suit les previsions, les positions paires ne sont jamais appellees
+#		|		|		|		|
+#	0	1	2	3	4	5	6	7	8
+#En principe le reste du code s adapte au tableau, meme si on en change le nombre d element
+
 VarFrap=100
 	
 def pause():
   sleep(0.01)
  
 def TestEgList(A,B,nbr):
+	print "A0 %d B0 %d" %(A[0],B[0])
 	Counter=0
-	for i in range (0,nbr-1):
+	for i in range (0,nbr):
 		if A[i]==B[i]:
+			print "TrueInt %d A %d B %d" %(Counter,A[i],B[i])
 			Counter = Counter +1
 	
 	if(Counter==nbr):
+		print "True %d" %Counter
 		return True
 	else:
+		print "False"
 		return False
 
 def Vitesse(Dep, Act, Cib, LastInc, MaxInc):
@@ -58,33 +69,40 @@ def Vitesse(Dep, Act, Cib, LastInc, MaxInc):
 					Inc=Cib-Act
 	return Inc
 	
-def CommandControlAll(Actu,Target):
+def CommandControlAll(Target):
+	global channel
+	global Actu
 	Dep=[Actu[0],Actu[1],Actu[2],Actu[3],Actu[4],Actu[5]]
 	Inc=[0,0,0,0,0,0]
 	MaxInc=[10,10,10,10,10,10]
+	print "ActuAvtTest0 %d TrgtAvtTest0 %d" %(Actu[0],Target[0])
 	while(TestEgList(Actu,Target,6)==False):
-		for i in range(0,5):
+		print "Pas egal"
+		for i in range(0,6):
 			Inc[i]=Vitesse(Dep[i],Actu[i],Target[i],Inc[i],MaxInc[i])
 			if Inc<0:
 				Actu[i]=Actu[i]+max(Inc[i],-MaxInc[i])
 			else:
 				Actu[i]=Actu[i]+min(Inc[i],MaxInc[i])
-			pwm.setPWM((i+1)*2,0,Actu[i])
+			pwm.setPWM(channel[i],0,Actu[i])
+			print "Mot %d Actu %d Cib %d" %(i+1,Actu[i],Target[i])
 		pause()
 	print "Target reach"
    
-def CommandControlUnique(Channel,Actu,Target):
-	Dep=Actu
+def CommandControlUnique(Moteur,Cible):
+	global Actu
+	global channel
+	Dep=Actu[Moteur-1]
 	Inc=0
 	MaxInc=10
-	while(Actu!=Target):
-		Inc=Vitesse(Dep,Actu,Target,Inc,MaxInc)
+	while(Actu[Moteur-1]!=Cible):
+		Inc=Vitesse(Dep,Actu[Moteur-1],Cible,Inc,MaxInc)
 		if Inc<0:
-			Actu=Actu+max(Inc,-MaxInc)
+			Actu[Moteur-1]=Actu[Moteur-1]+max(Inc,-MaxInc)
 		else:
-			Actu=Actu+min(Inc,MaxInc)
-		pwm.setPWM(Channel,0,Actu)
-		print "Actu %d" %Actu
+			Actu[Moteur-1]=Actu[Moteur-1]+min(Inc,MaxInc)
+		pwm.setPWM(channel[Moteur-1],0,Actu[Moteur-1])
+		#print "Actu %d" %Actu
 		pause()
 	print "Target reach"
  
@@ -94,43 +112,84 @@ def init(Channel,Target):
 		pwm.setPWM(Channel[i],0,Target[i])
 	print "Init OK"
 
+#Fonctions jeu musique	
+	
 def Frappe(direction):
-	global DefautMus
+	global PosFrap
 	global VarFrap
 	global Actu
 	if direction=="gauche":
-		CibleSeul=DefautMus[channel[5-1]]-VarFrap #Pas sûr pour le -, sera p'tet plus
+		CibleSeul=PosFrap[4]-VarFrap #Pas sur pour le -, sera p tet plus
 	else:
-		CibleSeul=DefautMus[channel[5-1]]-VarFrap #Pas sûr pour le +, sera p'tet -
+		CibleSeul=PosFrap[4]+VarFrap #Pas sur pour le +, sera p tet -
 	#Pos du futur timer
-	CommandControlUnique(channel[5-1],Actu[channel[5-1]],CibleSeul)
-	Actu[channel[5-1]] = CibleSeul
-	CommandControlUnique(channel[5-1],Actu[channel[5-1]],DefautMus[channel[5-1]])
-	Actu[channel[5-1]] = DefautMus[channel[5-1]]
+	CommandControlUnique(5,CibleSeul) #Coup rapide ?
+	CommandControlUnique(5,PosFrap[4]) #Retour aussi rapide pour frappe nette ? Calculer le temps necessaire pour toucher pour revenir immediatement ?
+	
+def ChgmtPos(PosCible):
+	global Actu
+	global PosPivot
+	global PosFrap
+	global PosVal1
+	CibleAll=[Actu[0],PosPivot[1],PosPivot[2],PosPivot[3],PosPivot[4],PosPivot[5]]
+	CommandControlAll(CibleAll)
+	CommandControlUnique(1,PosVal1[PosCible])
+	CibleAll=[Actu[0],PosFrap[1],PosFrap[2],PosFrap[3],PosFrap[4],PosFrap[5]]
+	CommandControlAll(CibleAll)
+
+def JeuNote(Note):
+	global PosVal1
+	Pos=-1 #sert de valeur par defaut
+	for i in range (0,len(PosVal1)):
+		if Actu[0]==PosVal1[i]:
+			Pos=i
+			break
+	if Pos+1==Note:
+		Frappe("droite")
+	elif Pos-1==Note:
+		Frappe("gauche")
+	elif Pos<=Note:
+		ChgmtPos(Note-1)
+		Frappe("droite")
+	else:
+		ChgmtPos(Note+1)
+		Frappe("gauche")
 ##Main
 
 # Initialise the PWM device using the default address
 pwm = PWM(0x40, debug=True)
+pwm.setPWMFreq(PWMFreq)  
 
 init(channel,Init) #To initialize the servos
 Actu=Init
+valeur=Init
 
 while (True):
-	choix=input("Voulez-vous controler tous les moteurs (1) ou un a la fois (0) (2 = un brute): ")
-	if(choix==1):
+	print("0) Commande souple d'un moteur\n")
+	print("1) Commande souple de tous les moteurs\n")
+	print("2) Commande brute de tous les moteurs\n")
+	print("3) Musiques ! (exemple)\n")
+	
+	choix=input("Votre choix ?")
+	if(choix==0):
+		cible = input("Element a controler")
+		temp = input("Prochaine valeur a atteindre du moteur %d (%d - %d): " %(cible,ServoMin[cible-1],ServoMax[cible-1]))
+		CommandControlUnique(cible,temp)
+	elif(choix==1): #elif -> "else if"
 		for i in range(0,6):
-			valeur[i] = input("Prochaine valeur a atteindre du moteur %d (%d - %d) : " %(channel[i],ServoMin[i-1],ServoMax[i-1])
-		CommandControlAll(actu,valeur)
-		actu=valeur
+			valeur[i] = input("Prochaine valeur a atteindre du moteur %d (%d - %d) : " %(i+1,ServoMin[i],ServoMax[i]))
+		print "Actu1 %d" %Actu[0]
+		CommandControlAll(valeur)
+	elif(choix==2):
+		cible = input("Element a controler : ")
+		temp = input("Prochaine valeur a atteindre du moteur %d (%d - %d): " %(cible,ServoMin[cible-1],ServoMax[cible-1]))
+		pwm.setPWM(2*cible,0,temp)
+		actu[cible-1]=temp
+	elif(choix==3):
+		print("Preparez vous a mettre la baguette\n")
+		sleep(2)
+		CommandControlUnique(6,ServoMax[5])
+		sleep(1)
+		CommandControlUnique
 	else:
-		if(choix==0):
-			cible = input("Element a controler : ")
-			temp = input("Prochaine valeur a atteindre du moteur %d (%d - %d): " %(cible,ServoMin[i-1],ServoMax[i-1])
-			CommandControlUnique(channel[i],actu[i-1],temp)
-			actu[cible-1]=temp
-		else:
-			cible = input("Element a controler : ")
-			temp = input("Prochaine valeur a atteindre du moteur %d (%d - %d): " %(cible,ServoMin[i-1],ServoMax[i-1])
-			pwm.setPWM(2*cible,0,temp)
-			actu[cible-1]=temp
-
+		break

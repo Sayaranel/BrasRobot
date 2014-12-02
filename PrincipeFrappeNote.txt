@@ -1,4 +1,4 @@
-Passage d'une note à l'autre (si bouteille non à coté)
+﻿Passage d'une note à l'autre (si bouteille non à coté)
 On relève
 2,3,4
 On pivote
@@ -10,7 +10,7 @@ On frappe
 ----------------------
 Soit | = 1 bouteille
 	|		|		|		|		
-1	2	3	4	5	6	7	8	9	
+0	1	2	3	4	5	6	7	8	
 
 Fonction Frappe (direction)
 si gauche
@@ -19,9 +19,10 @@ si droite
 	...
 	
 AttenteSynchro (pas encore réfléchi à comment faire? thread allant changer la valeur d'ue variable périodiquement ?)
+Retour pos
 
 Fonction Déplacement (PosActu,PosCible)
-CibleAll=[Cible[0],ValPivo2,ValPivo3,Valpivo4,Cible[4],Cible[5]]
+CibleAll=[Pos[0],ValPivo2,ValPivo3,Valpivo4,Pos[4],Pos[5]]
 DeplacementTout(actuel,cibleall)
 Cibleseul=Val(PosCible)
 Actuseul=Val(Posactu)
@@ -29,8 +30,7 @@ Deplacementseul(actuelseul,cibleseul)
 CibleAll=[Cible[0],ValFrap2,ValFrap3,Valfrap4,Cible[4],Cible[5]]
 DeplacementTout(actuel,cibleall)
 	
-Fonction note(actuel,cible,note)
-"réception/lecture note"
+Fonction note(actuel,cible,note) 
 si actuel+1==cible
 	frappe à droite
 sinon
@@ -41,3 +41,9 @@ sinon
 			déplacement cible-1
 		else
 			déplacement cible +1
+---------------
+Code réseau -> réception note
+---------------
+Code timer
+---------------
+"Etats" -> « main »
