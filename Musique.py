@@ -20,10 +20,10 @@ PWMFreq = 60					# Set frequency to 60 Hz
 valeur=[0,0,0,0,0,0]
 
 VieThread = True
-Mode = 'z' #z = rien, x = commandé directement, y = ajoute à une liste
+Mode = 'z' #z = rien, x = commande directement, y = ajoute a une liste
 
 #Parametres musiquaux
-PosFrap=[400,450,350,450,400,320]
+PosFrap=[400,360,270,450,400,320]
 PosPivot=[400,450,350,450,400,320]
 PosVal1=[150,0,250,0,350,0,450,0,550]
 #PosVal1 pour 4 bouteilles, si cela suit les previsions, les positions paires ne sont jamais appellees
@@ -31,7 +31,7 @@ PosVal1=[150,0,250,0,350,0,450,0,550]
 #	0	1	2	3	4	5	6	7	8
 #En principe le reste du code s adapte au tableau, meme si on en change le nombre d element
 
-VarFrap=100
+VarFrap=15
 	
 def pause():
   sleep(0.01)
@@ -122,13 +122,13 @@ def Frappe(direction):
 	global PosFrap
 	global VarFrap
 	global Actu
-	if direction=="gauche":
-		CibleSeul=PosFrap[4]-VarFrap #Pas sur pour le -, sera p tet plus
-	else:
-		CibleSeul=PosFrap[4]+VarFrap #Pas sur pour le +, sera p tet -
 	#Pos du futur timer
-	CommandControlUnique(5,CibleSeul) #Coup rapide ?
-	CommandControlUnique(5,PosFrap[4]) #Retour aussi rapide pour frappe nette ? Calculer le temps necessaire pour toucher pour revenir immediatement ?
+	if direction=="gauche":
+		pwm.setPWM(10,0,PosFrap[4]+VarFrap)
+	else:
+		pwm.setPWM(10,0,PosFrap[4]-VarFrap)
+	sleep(0.5) #sera adapte
+	pwm.setPWM(10,0,PosFrap[4])
 	
 def ChgmtPos(PosCible):
 	global Actu
@@ -160,7 +160,7 @@ def JeuNote(Note):
 		Frappe("gauche")
 
 #Reseau
-def ConvertNote(Lettre)
+def ConvertNote(Lettre):
 	if Lettre=='a' :
 		NumNote=1
 	elif Lettre=='b' :
@@ -200,11 +200,7 @@ def FuncRes(Port,nothing):
 				elif Mode == 'y':
 					print "Mode y"
 				else:
-					if data[0]=='a': print "Haut-Gauche"
-					elif data[0]=='b': print "Haut-Droite"
-					elif data[0]=='d': print "Bas-Gauche"
-					elif data[0]=='e': print "Bas-Droite"
-			else: print "Data received ", data
+					print "Data received ", data
 	#conn.send(data)  # echo
 	conn.close()
 ##Main
@@ -225,6 +221,7 @@ while (True):
 	print("1) Commande souple de tous les moteurs\n")
 	print("2) Commande brute de tous les moteurs\n")
 	print("3) Musiques ! (exemple)\n")
+	print("4) Frappe droite")
 	
 	choix=input("Votre choix ?")
 	if(choix==0):
@@ -240,7 +237,7 @@ while (True):
 		cible = input("Element a controler : ")
 		temp = input("Prochaine valeur a atteindre du moteur %d (%d - %d): " %(cible,ServoMin[cible-1],ServoMax[cible-1]))
 		pwm.setPWM(2*cible,0,temp)
-		actu[cible-1]=temp
+		Actu[cible-1]=temp
 	elif(choix==3):
 		print("Preparez vous a mettre la baguette\n")
 		sleep(1)
@@ -249,7 +246,9 @@ while (True):
 		sleep(2)
 		CommandControlUnique(6,PosPivot[5])
 		print("Attente des instructions\n")
-		
+	elif(choix==4):
+		Frappe("droite")
+	
 	else:
 		#VieThread=False
 		threadres.stop()
