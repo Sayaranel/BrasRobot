@@ -3,38 +3,8 @@
 from Adafruit_PWM_Servo_Driver import PWM
 import time
 from time import sleep
-
-#blabla
 import socket
 import threading
-
-def FuncRes(Port,nothing):
-	
-	TCP_IP = '192.168.42.1'
-	TCP_PORT = Port
-	BUFFER_SIZE = 1024  # Normally 1024, but we want fast response
-
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.bind((TCP_IP, TCP_PORT))
-	s.listen(1)
-	
-	while 1:
-		conn, addr = s.accept()
-		print 'Connection address:', addr
-		while 1:
-			data = conn.recv(BUFFER_SIZE)
-			#if not data: break
-			if not data:
-				print "Coupure connection"
-				break
-			if data[0]=='a': print "Haut-Gauche"
-			elif data[0]=='b': print "Haut-Droite"
-			elif data[0]=='d': print "Bas-Gauche"
-			elif data[0]=='e': print "Bas-Droite"
-			else: print "Data received ", data
-	#conn.send(data)  # echo
-	conn.close()
-
 
 # ===========================================================================
 # Musique (sans thread timer)
@@ -43,11 +13,14 @@ def FuncRes(Port,nothing):
 #Parametres generaux et/ou globaux
 ServoMin=[130,230,230,180,145,200]
 ServoMax=[630,690,580,630,660,660] # Min pulse length out of 4096
-Init=[400,450,350,450,400,400]  #actual value of the impulsion of each servo
+Actu=[400,450,350,450,400,400]  #actual value of the impulsion of each servo
 channel=[2,4,6,8,10,12]			#where pins are plugged
 PWMFreq = 60					# Set frequency to 60 Hz           
 
-Actu=[0,0,0,0,0,0]
+valeur=[0,0,0,0,0,0]
+
+VieThread = True
+Mode = 'z' #z = rien, x = commandé directement, y = ajoute à une liste
 
 #Parametres musiquaux
 PosFrap=[400,450,350,450,400,320]
@@ -108,7 +81,7 @@ def CommandControlAll(Target):
 	Inc=[0,0,0,0,0,0]
 	MaxInc=[10,10,10,10,10,10]
 	print "ActuAvtTest0 %d TrgtAvtTest0 %d" %(Actu[0],Target[0])
-	while(TestEgList(Actu,Target,6)==False):
+	while(TestEgList(Actu,Target,6)==False): #Actu==Target marche p'tet
 		print "Pas egal"
 		for i in range(0,6):
 			Inc[i]=Vitesse(Dep[i],Actu[i],Target[i],Inc[i],MaxInc[i])
@@ -185,15 +158,62 @@ def JeuNote(Note):
 	else:
 		ChgmtPos(Note+1)
 		Frappe("gauche")
+
+#Reseau
+def ConvertNote(Lettre)
+	if Lettre=='a' :
+		NumNote=1
+	elif Lettre=='b' :
+		NumNote=2
+	elif Lettre=='c' :
+		NumNote=3
+	else:
+		print "Probleme de conversion"
+		NumNote=1
+	return NumNote
+
+def FuncRes(Port,nothing):
+	global VieThread
+	global Mode
+	
+	TCP_IP = '192.168.42.1'
+	TCP_PORT = Port
+	BUFFER_SIZE = 1024  # Normally 1024, but we want fast response
+
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.bind((TCP_IP, TCP_PORT))
+	s.listen(1)
+	
+	while VieThread:
+		conn, addr = s.accept()
+		print 'Connection address:', addr
+		while 1:
+			data = conn.recv(BUFFER_SIZE)
+			if not data:
+				print "Coupure connection"
+				break
+			elif data[0]=='x' or data[0]=='y':
+				Mode = data[0]
+			else:
+				if Mode == 'x':
+					JeuNote(ConvertNote(data[0]))
+				elif Mode == 'y':
+					print "Mode y"
+				else:
+					if data[0]=='a': print "Haut-Gauche"
+					elif data[0]=='b': print "Haut-Droite"
+					elif data[0]=='d': print "Bas-Gauche"
+					elif data[0]=='e': print "Bas-Droite"
+			else: print "Data received ", data
+	#conn.send(data)  # echo
+	conn.close()
 ##Main
 
 # Initialise the PWM device using the default address
 pwm = PWM(0x40, debug=True)
 pwm.setPWMFreq(PWMFreq)  
 
-init(channel,Init) #To initialize the servos
-Actu=Init
-valeur=Init
+init(channel,Actu) #To initialize the servos
 
 #Blabla
 Port=11000
@@ -231,5 +251,7 @@ while (True):
 		print("Attente des instructions\n")
 		
 	else:
+		#VieThread=False
+		threadres.stop()
 		threadres.join()
 		break
