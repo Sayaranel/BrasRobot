@@ -5,9 +5,10 @@ import time
 from time import sleep
 
 #blabla
+import socket
 import threading
 
-def FuncRes(Port):
+def FuncRes(Port,nothing):
 	
 	TCP_IP = '192.168.42.1'
 	TCP_PORT = Port
@@ -23,13 +24,13 @@ def FuncRes(Port):
 		while 1:
 			data = conn.recv(BUFFER_SIZE)
 			#if not data: break
+			if not data:
+				print "Coupure connection"
+				break
 			if data[0]=='a': print "Haut-Gauche"
 			elif data[0]=='b': print "Haut-Droite"
 			elif data[0]=='d': print "Bas-Gauche"
 			elif data[0]=='e': print "Bas-Droite"
-			elif not data:
-				print "Coupure connection"
-				break
 			else: print "Data received ", data
 	#conn.send(data)  # echo
 	conn.close()
@@ -196,7 +197,7 @@ valeur=Init
 
 #Blabla
 Port=11000
-threadres=threading.Thread(target=FuncRes, args=(Port))
+threadres=threading.Thread(target=FuncRes, args=(Port,0))
 threadres.start()
 
 while (True):
