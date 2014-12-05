@@ -14,14 +14,8 @@ conn, addr = s.accept()
 print 'Connection address:', addr
 while 1:
 	data = conn.recv(BUFFER_SIZE)
-	#if not data: break
-	if data[0]=='a': print "Haut-Gauche"
-	elif data[0]=='b': print "Haut-Droite"
-	elif data[0]=='d': print "Bas-Gauche"
-	elif data[0]=='e': print "Bas-Droite"
-	elif data[0]=='x': print "Coupure onnection"
-	elif not data:
-		print "Coupure onnection"
+	if not data:
+		print "Coupure connection"
 		break
 	else: print "Data received ", data
 	#conn.send(data)  # echo

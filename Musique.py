@@ -23,19 +23,19 @@ VieThread = True
 Mode = 'z' #z = rien, x = commande directement, y = ajoute a une liste
 
 #Parametres musiquaux
-PosPivot=[0,450,350,450,400,320] #Le 0 correspond a une des PosVal1
-PosVal1=[150,0,250,0,350,0,450,0,550]
-PosFrapM2=[360,0,360,0,360,0,360,0,360]
-PosFrapM3=[270,0,270,0,270,0,270,0,270]
-PosFrapM4=[450,0,450,0,450,0,450,0,450]
-PosFrapM5=[400,0,400,0,400,0,400,0,400]
-PosFrapM5Dr=[400,0,400,0,400,0,400,0,400] ##Bouger 2 moteurs pour la frappe ?
-PosFrapM5Ga=[400,0,400,0,400,0,400,0,400]
+PosPivot=[0,420,308,450,370,320] #Le 0 correspond a une des PosVal1
+PosVal1=[130,0,370,0,430,0,600]
+PosFrapM2=[360,0,350,0,350,0,360]
+PosFrapM3=[270,0,308,0,308,0,270]
+PosFrapM4=[450,0,450,0,450,0,450]
+PosFrapM5=[400,0,370,0,400,0,400]
+PosFrapM5Dr=[400,0,335,0,350,0,400] ##Bouger 2 moteurs pour la frappe ?
+PosFrapM5Ga=[400,0,405,0,435,0,400]
 PosFrapM6=320
 
 #PosVal1 pour 4 bouteilles, si cela suit les previsions, les positions paires ne sont jamais appellees
-#		|		|		|		|
-#	0	1	2	3	4	5	6	7	8
+#		|		|		|	
+#	X	1	2	3	4	5	X
 #En principe le reste du code s adapte au tableau, meme si on en change le nombre d element
 
 VarFrap=15
@@ -43,20 +43,20 @@ VarFrap=15
 def pause():
   sleep(0.01)
  
-def TestEgList(A,B,nbr):
-	print "A0 %d B0 %d" %(A[0],B[0])
-	Counter=0
-	for i in range (0,nbr):
-		if A[i]==B[i]:
-			print "TrueInt %d A %d B %d" %(Counter,A[i],B[i])
-			Counter = Counter +1
-	
-	if(Counter==nbr):
-		print "True %d" %Counter
-		return True
-	else:
-		print "False"
-		return False
+#def TestEgList(A,B,nbr):
+#	print "A0 %d B0 %d" %(A[0],B[0])
+#	Counter=0
+#	for i in range (0,nbr):
+#		if A[i]==B[i]:
+#			print "TrueInt %d A %d B %d" %(Counter,A[i],B[i])
+#			Counter = Counter +1
+#	
+#	if(Counter==nbr):
+#		print "True %d" %Counter
+#		return True
+#	else:
+#		print "False"
+#		return False
 
 def Vitesse(Dep, Act, Cib, LastInc, MaxInc):
 	Inc = 0
@@ -87,8 +87,9 @@ def CommandControlAll(Target):
 	Dep=[Actu[0],Actu[1],Actu[2],Actu[3],Actu[4],Actu[5]]
 	Inc=[0,0,0,0,0,0]
 	MaxInc=[10,10,10,10,10,10]
-	print "ActuAvtTest0 %d TrgtAvtTest0 %d" %(Actu[0],Target[0])
-	while(TestEgList(Actu,Target,6)==False): #Actu==Target marche p'tet
+	for i in range(0,6):
+		print "ActuAvtTest%d %d TrgtAvtTest%d %d" %(i,Actu[i],i,Target[i])
+	while Actu!=Target:#TestEgList(Actu,Target,6)==False): #Actu==Target marche ptet
 		print "Pas egal"
 		for i in range(0,6):
 			Inc[i]=Vitesse(Dep[i],Actu[i],Target[i],Inc[i],MaxInc[i])
@@ -121,21 +122,21 @@ def CommandControlUnique(Moteur,Cible):
 def init(Channel,Target):
 	for i in range(0,6):
 		pwm.setPWM(Channel[i],0,Target[i])
-	print "Init OK"
-
+	print "Init OK"	
+	
 #Fonctions jeu musique	
 	
 def Frappe(Pos,direction):
-	global PosFrap
-	global VarFrap
-	global Actu
+	global PosFrapM5
+	global PosFrapM5Dr
+	global PosFrapM5Ga
 	#Pos du futur timer
 	if direction=="gauche": ##Modif ici
-		pwm.setPWM(10,0,PosFrap[4]+VarFrap)
+		pwm.setPWM(10,0,PosFrapM5Ga[Pos])
 	else:
-		pwm.setPWM(10,0,PosFrap[4]-VarFrap)
-	sleep(0.5) #sera adapte
-	pwm.setPWM(10,0,PosFrap[4])
+		pwm.setPWM(10,0,PosFrapM5Dr[Pos])
+	sleep(0.3) #sera adapte
+	pwm.setPWM(10,0,PosFrapM5[Pos])
 	
 def ChgmtPos(PosCible):
 	global Actu
@@ -155,21 +156,55 @@ def ChgmtPos(PosCible):
 
 def JeuNote(Note):
 	global PosVal1
-	Pos=-1 #sert de valeur par defaut
-	for i in range (0,len(PosVal1)):
-		if Actu[0]==PosVal1[i]:
-			Pos=i
-			break
-	if Pos+1==Note:
-		Frappe(Note,"droite")
-	elif Pos-1==Note:
-		Frappe(Note,"gauche")
-	elif Pos<=Note:
-		ChgmtPos(Note-1)
+	global Actu
+	
+	if Note==1:
+		if Actu[0]==PosVal1[2]:
+			print "Frappe a gauche"
+			Frappe(2,"gauche")
+		else:
+			print "Changement de position"
+			ChgmtPos(2)
+			print "Frappe a gauche"
+			Frappe(2,"gauche")
+	elif Note==PosVal1.__len__()-2:
+		if Actu[0]==PosVal1[PosVal1.__len__()-3]:
+			print "Deja en position"
+			print "Frappe a droite"
+			Frappe(PosVal1.__len__()-3,"droite")
+		else:
+			print "Changement de position"
+			ChgmtPos(PosVal1.__len__()-3)
+			print "Frappe a droite"
+			Frappe(PosVal1.__len__()-3,"droite")	
+	elif Actu[0]==PosVal1[Note-1]:
+		print "Deja en position"
+		print "Frappe a droite"
 		Frappe(Note-1,"droite")
-	else:
-		ChgmtPos(Note+1)
+	elif Actu[0]==PosVal1[Note+1]:
+		print "Deja en position"
+		print "Frappe a gauche"
 		Frappe(Note+1,"gauche")
+	elif Actu[0]<PosVal1[Note-1]:
+		print "Changement de position"
+		ChgmtPos(Note-1)
+		print "Frappe a droite"
+		Frappe(Note-1,"droite")
+	else: #on respectera Actu[0]>PosVal1[Note-1] ou alors on sera dans une postion absurbe qui de toute facon tolere les commandes qui suivent
+		print "Changement de position"
+		ChgmtPos(Note+1)
+		print "Frappe a gauche"
+		Frappe(Note+1,"gauche")
+
+def MusiqueInit():
+	global PosPivot
+	global PosVal1
+	global Actu
+	
+	CibleAll=[Actu[0],450,350,450,Actu[4],Actu[5]]
+	CommandControlAll(CibleAll)
+	CibleAll=[360,PosPivot[1],PosPivot[2],PosPivot[3],PosPivot[4],Actu[5]]
+	CommandControlAll(CibleAll)
 
 #Reseau
 def ConvertNote(Lettre):
@@ -223,17 +258,18 @@ pwm.setPWMFreq(PWMFreq)
 
 init(channel,Actu) #To initialize the servos
 
-#Blabla
+#Reseau coupe pour la calibration
 Port=11000
-threadres=threading.Thread(target=FuncRes, args=(Port,0))
-threadres.start()
+#threadres=threading.Thread(target=FuncRes, args=(Port,0))
+#threadres.start()
 
 while (True):
 	print("0) Commande souple d'un moteur\n")
 	print("1) Commande souple de tous les moteurs\n")
 	print("2) Commande brute de tous les moteurs\n")
 	print("3) Musiques ! (exemple)\n")
-	print("4) Séquence exemple")
+	print("4) Sequence exemple\n")
+	print("5) Jouer une note demandee\n")
 	
 	choix=input("Votre choix ?")
 	if(choix==0):
@@ -252,17 +288,35 @@ while (True):
 		Actu[cible-1]=temp
 	elif(choix==3):
 		print("Preparez vous a mettre la baguette\n")
-		sleep(1)
+		sleep(0.2)
 		CommandControlUnique(6,ServoMax[5])
 		print("Mettez la baguette\n")
-		sleep(2)
+		sleep(1)
 		CommandControlUnique(6,PosPivot[5])
+		sleep(1)
+		MusiqueInit()
 		print("Attente des instructions\n")
 	elif(choix==4):
-		Frappe("droite")
-	
+		MusiqueInit()
+		print "En position initiale"
+		JeuNote(1)
+		sleep(1)
+		JeuNote(1)
+		sleep(1)
+		JeuNote(3)
+		sleep(1)
+		JeuNote(1)
+		sleep(1)
+		JeuNote(5)
+		sleep(1)
+		JeuNote(3)
+		sleep(1)
+		JeuNote(1)
+	elif(choix==5):
+		temp = input("Note a jouer ?")
+		JeuNote(temp)
 	else:
 		#VieThread=False
-		threadres.stop()
-		threadres.join()
+		#threadres.stop()
+		#threadres.join()
 		break
