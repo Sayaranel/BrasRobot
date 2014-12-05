@@ -23,9 +23,16 @@ VieThread = True
 Mode = 'z' #z = rien, x = commande directement, y = ajoute a une liste
 
 #Parametres musiquaux
-PosFrap=[400,360,270,450,400,320]
-PosPivot=[400,450,350,450,400,320]
+PosPivot=[0,450,350,450,400,320] #Le 0 correspond a une des PosVal1
 PosVal1=[150,0,250,0,350,0,450,0,550]
+PosFrapM2=[360,0,360,0,360,0,360,0,360]
+PosFrapM3=[270,0,270,0,270,0,270,0,270]
+PosFrapM4=[450,0,450,0,450,0,450,0,450]
+PosFrapM5=[400,0,400,0,400,0,400,0,400]
+PosFrapM5Dr=[400,0,400,0,400,0,400,0,400] ##Bouger 2 moteurs pour la frappe ?
+PosFrapM5Ga=[400,0,400,0,400,0,400,0,400]
+PosFrapM6=320
+
 #PosVal1 pour 4 bouteilles, si cela suit les previsions, les positions paires ne sont jamais appellees
 #		|		|		|		|
 #	0	1	2	3	4	5	6	7	8
@@ -118,12 +125,12 @@ def init(Channel,Target):
 
 #Fonctions jeu musique	
 	
-def Frappe(direction):
+def Frappe(Pos,direction):
 	global PosFrap
 	global VarFrap
 	global Actu
 	#Pos du futur timer
-	if direction=="gauche":
+	if direction=="gauche": ##Modif ici
 		pwm.setPWM(10,0,PosFrap[4]+VarFrap)
 	else:
 		pwm.setPWM(10,0,PosFrap[4]-VarFrap)
@@ -133,12 +140,17 @@ def Frappe(direction):
 def ChgmtPos(PosCible):
 	global Actu
 	global PosPivot
-	global PosFrap
+	global PosFrapM2
+	global PosFrapM3
+	global PosFrapM4
+	global PosFrapM5
+	global PosFrapM5
+	global PosFrapM5
 	global PosVal1
-	CibleAll=[Actu[0],PosPivot[1],PosPivot[2],PosPivot[3],PosPivot[4],PosPivot[5]]
+	CibleAll=[Actu[0],PosPivot[1],PosPivot[2],PosPivot[3],PosPivot[4],Actu[5]]
 	CommandControlAll(CibleAll)
 	CommandControlUnique(1,PosVal1[PosCible])
-	CibleAll=[Actu[0],PosFrap[1],PosFrap[2],PosFrap[3],PosFrap[4],PosFrap[5]]
+	CibleAll=[Actu[0],PosFrapM2[PosCible],PosFrapM3[PosCible],PosFrapM4[PosCible],PosFrapM5[PosCible],Actu[5]]
 	CommandControlAll(CibleAll)
 
 def JeuNote(Note):
@@ -149,15 +161,15 @@ def JeuNote(Note):
 			Pos=i
 			break
 	if Pos+1==Note:
-		Frappe("droite")
+		Frappe(Note,"droite")
 	elif Pos-1==Note:
-		Frappe("gauche")
+		Frappe(Note,"gauche")
 	elif Pos<=Note:
 		ChgmtPos(Note-1)
-		Frappe("droite")
+		Frappe(Note-1,"droite")
 	else:
 		ChgmtPos(Note+1)
-		Frappe("gauche")
+		Frappe(Note+1,"gauche")
 
 #Reseau
 def ConvertNote(Lettre):
@@ -221,7 +233,7 @@ while (True):
 	print("1) Commande souple de tous les moteurs\n")
 	print("2) Commande brute de tous les moteurs\n")
 	print("3) Musiques ! (exemple)\n")
-	print("4) Frappe droite")
+	print("4) Séquence exemple")
 	
 	choix=input("Votre choix ?")
 	if(choix==0):
