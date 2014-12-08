@@ -3,6 +3,8 @@
 from Adafruit_PWM_Servo_Driver import PWM
 import time
 from time import sleep
+from threading import Timer 
+import time
 import socket
 import threading
 
@@ -19,8 +21,7 @@ PWMFreq = 60					# Set frequency to 60 Hz
 
 valeur=[0,0,0,0,0,0]
 
-VieThread = True
-Mode = 'z' #z = rien, x = commande directement, y = ajoute a une liste
+Mode = 'x' #x = commande directement, y = ecriture partition
 
 #Parametres musiquaux
 PosPivot=[0,420,308,450,370,320] #Le 0 correspond a une des PosVal1
@@ -33,30 +34,23 @@ PosFrapM5Dr=[400,0,335,0,350,0,400] ##Bouger 2 moteurs pour la frappe ?
 PosFrapM5Ga=[400,0,405,0,435,0,400]
 PosFrapM6=320
 
+PeriodeTempo=5
+
 #PosVal1 pour 4 bouteilles, si cela suit les previsions, les positions paires ne sont jamais appellees
 #		|		|		|	
 #	X	1	2	3	4	5	X
 #En principe le reste du code s adapte au tableau, meme si on en change le nombre d element
 
-VarFrap=15
-	
+Partition=[]
+NotesAJouer=[]
+VerrouNAJ = threading.Lock()
+VerrouFrappe = threading.Lock()
+
+
+##Fin des paramètres globaux et ou de comportement
+
 def pause():
   sleep(0.01)
- 
-#def TestEgList(A,B,nbr):
-#	print "A0 %d B0 %d" %(A[0],B[0])
-#	Counter=0
-#	for i in range (0,nbr):
-#		if A[i]==B[i]:
-#			print "TrueInt %d A %d B %d" %(Counter,A[i],B[i])
-#			Counter = Counter +1
-#	
-#	if(Counter==nbr):
-#		print "True %d" %Counter
-#		return True
-#	else:
-#		print "False"
-#		return False
 
 def Vitesse(Dep, Act, Cib, LastInc, MaxInc):
 	Inc = 0
@@ -130,7 +124,9 @@ def Frappe(Pos,direction):
 	global PosFrapM5
 	global PosFrapM5Dr
 	global PosFrapM5Ga
-	#Pos du futur timer
+	global VerrouFrappe
+	
+	VerrouFrappe.acquire()
 	if direction=="gauche": ##Modif ici
 		pwm.setPWM(10,0,PosFrapM5Ga[Pos])
 	else:
@@ -190,7 +186,7 @@ def JeuNote(Note):
 		ChgmtPos(Note-1)
 		print "Frappe a droite"
 		Frappe(Note-1,"droite")
-	else: #on respectera Actu[0]>PosVal1[Note-1] ou alors on sera dans une postion absurbe qui de toute facon tolere les commandes qui suivent
+	elif Actu[0]<PosVal1[Note-1]: #on respectera Actu[0]>PosVal1[Note-1] ou alors on sera dans une postion absurbe qui de toute facon tolere les commandes qui suivent
 		print "Changement de position"
 		ChgmtPos(Note+1)
 		print "Frappe a gauche"
@@ -206,22 +202,68 @@ def MusiqueInit():
 	CibleAll=[360,PosPivot[1],PosPivot[2],PosPivot[3],PosPivot[4],Actu[5]]
 	CommandControlAll(CibleAll)
 
-#Reseau
-def ConvertNote(Lettre):
+	
+#Thread Musicien	
+def LectureNote(Lettre):
 	if Lettre=='a' :
 		NumNote=1
 	elif Lettre=='b' :
-		NumNote=2
-	elif Lettre=='c' :
 		NumNote=3
+	elif Lettre=='c' :
+		NumNote=5
 	else:
-		print "Probleme de conversion"
+		print "Probleme de lecture d une note par le musicien"
 		NumNote=1
 	return NumNote
 
-def FuncRes(Port,nothing):
-	global VieThread
+def Musicien(): ##Tourne en boucle la fonction jeu note en fonction du mode
 	global Mode
+	global NotesAJouer, VerrouNAJ
+	
+	if NotesAJouer:
+		JeuNote(LectureNote(NotesAJouer[0]))
+		NotesAJouer.pop(0)
+		
+#Thread Metronome
+def Metronome():
+	global VerrouFrappe
+	global NotesAJouer
+	try: #Essaie d'autoriser la frappe
+		VerrouFrappe.release()
+	except ThreadError: #si la frappe était déjà autorisée, capture l'erreur
+		if NotesAJouer: #Si il y a des notes a jouer
+			print"Thread error au niveau du metronome. Tempo trop rapide ?"
+		
+class MyRepeater(object):
+    def __init__(self, interval, function):#, *args, **kwargs):
+        self._timer     = None
+        self.interval   = interval
+        self.function   = function
+        #self.args       = args
+        #self.kwargs     = kwargs
+        self.is_running = False
+        self.start()
+
+    def _run(self):
+        self.is_running = False
+        self.start()
+        self.function(*self.args, **self.kwargs)
+
+    def start(self):
+        if not self.is_running:
+            self._timer = Timer(self.interval, self._run)
+            self._timer.start()
+            self.is_running = True
+
+    def stop(self):
+        self._timer.cancel()
+        self.is_running = False	
+	
+#Reseau
+def FuncRes(Port,nothing):
+	global Mode
+	global NotesAJouer, VerrouNAJ
+	global Partition
 	
 	TCP_IP = '192.168.42.1'
 	TCP_PORT = Port
@@ -231,7 +273,7 @@ def FuncRes(Port,nothing):
 	s.bind((TCP_IP, TCP_PORT))
 	s.listen(1)
 	
-	while VieThread:
+	while 1:
 		conn, addr = s.accept()
 		print 'Connection address:', addr
 		while 1:
@@ -239,16 +281,45 @@ def FuncRes(Port,nothing):
 			if not data:
 				print "Coupure connection"
 				break
-			elif data[0]=='x' or data[0]=='y':
-				Mode = data[0]
-			else:
-				if Mode == 'x':
-					JeuNote(ConvertNote(data[0]))
-				elif Mode == 'y':
-					print "Mode y"
-				else:
+			elif Mode =='x':
+				if data[0]=='x':
+					pass
+				elif data[0]=='y':
+					Partition=[]
+					Mode= 'y'
+				elif data[0]=='z':
+					VerrouNAJ.acquire()
+					NotesAJouer=[] #On remplace les instruction musicales en cours par la partition
+					NotesAJouer.extend(Partition)
+					VerrouNAJ.release()
+					Mode = 'z'
+				elif not(data.__len__()==1):
 					print "Data received ", data
-	#conn.send(data)  # echo
+				else:
+					VerrouNAJ.acquire()
+					NotesAJouer.append(data[0])
+					VerrouNAJ.release()
+			elif Mode =='y':
+				if Data[Data.__len__()-1]=='z' or Data[Data.__len__()-1]=='x':
+					NextMode=Data[Data.__len__()-1]
+					Data.pop(Data.__len__()-1)
+					Partition.extend(Data)
+					if NextMode=='z':
+						VerrouNAJ.acquire()
+						NotesAJouer=[] #On remplace les instruction musicales en cours par la partition
+						NotesAJouer.extend(Partition)
+						VerrouNAJ.release()
+					Mode=NextMode
+				else:
+					Partition.extend(Data)
+			elif Mode =='z':
+				if data[0]=='x' or data[0]=='y':
+					VerrouNAJ.acquire() #On interrompt la lecture
+					NotesAJouer=[]
+					VerrouNAJ.release()
+					Mode=data[0]
+			else:
+				Mode == 'x'
 	conn.close()
 ##Main
 
@@ -258,10 +329,16 @@ pwm.setPWMFreq(PWMFreq)
 
 init(channel,Actu) #To initialize the servos
 
-#Reseau coupe pour la calibration
+#Lancement du metronome et du musicien
+Metro= MyRepeater(PeriodeTempo, Metronome) # call myFunction every Periode Tempo secondes
+#Metro auto-start
+Music= threading.Thread(target=Musicien)
+Music.start()
+
+#Lancement reseau
 Port=11000
-#threadres=threading.Thread(target=FuncRes, args=(Port,0))
-#threadres.start()
+threadres=threading.Thread(target=FuncRes, args=(Port,0))
+threadres.start()
 
 while (True):
 	print("0) Commande souple d'un moteur\n")
@@ -316,7 +393,7 @@ while (True):
 		temp = input("Note a jouer ?")
 		JeuNote(temp)
 	else:
-		#VieThread=False
-		#threadres.stop()
-		#threadres.join()
+		threadres.stop() #Faudra faire le code pour que cela se termine proprement http://python.developpez.com/faq/?page=Thread
+		Metronome.stop()
+		Musicien.stop()
 		break
