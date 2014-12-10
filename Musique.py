@@ -9,7 +9,7 @@ import socket
 import threading
 
 # ===========================================================================
-# Musique (sans thread timer)
+# Musique (avec thread timer)
 # ===========================================================================
 
 #Parametres generaux et/ou globaux
@@ -47,7 +47,7 @@ VerrouNAJ = threading.Lock()
 VerrouFrappe = threading.Lock()
 
 
-##Fin des paramètres globaux et ou de comportement
+##Fin des parametres globaux et ou de comportement
 
 def pause():
   sleep(0.01)
