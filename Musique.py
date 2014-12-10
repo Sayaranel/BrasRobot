@@ -34,7 +34,7 @@ PosFrapM5Dr=[400,0,335,0,350,0,400] ##Bouger 2 moteurs pour la frappe ?
 PosFrapM5Ga=[400,0,405,0,435,0,400]
 PosFrapM6=320
 
-PeriodeTempo=5
+PeriodeTempo=2
 
 #PosVal1 pour 4 bouteilles, si cela suit les previsions, les positions paires ne sont jamais appellees
 #		|		|		|	
@@ -126,12 +126,16 @@ def Frappe(Pos,direction):
 	global PosFrapM5Ga
 	global VerrouFrappe
 	
-	VerrouFrappe.acquire()
+	if VerrouFrappe.locked():
+		VerrouFrappe.acquire()
+	else: #Le else sert a couvrir le cas ou on commence a jouer afin de se mettre dans le temp (car au depart le lock sera forcement relache)
+		VerrouFrappe.acquire()
+		VerrouFrappe.acquire()
 	if direction=="gauche": ##Modif ici
 		pwm.setPWM(10,0,PosFrapM5Ga[Pos])
 	else:
 		pwm.setPWM(10,0,PosFrapM5Dr[Pos])
-	sleep(0.3) #sera adapte
+	sleep(0.2) #sera adapte
 	pwm.setPWM(10,0,PosFrapM5[Pos])
 	
 def ChgmtPos(PosCible):
@@ -219,35 +223,42 @@ def LectureNote(Lettre):
 def Musicien(): ##Tourne en boucle la fonction jeu note en fonction du mode
 	global Mode
 	global NotesAJouer, VerrouNAJ
-	
-	if NotesAJouer:
-		JeuNote(LectureNote(NotesAJouer[0]))
-		NotesAJouer.pop(0)
+	while 1:
+		if NotesAJouer:
+			if NotesAJouer[0]=='s':
+				if VerrouFrappe.locked():
+					VerrouFrappe.acquire()
+				else: #voir frappe
+					VerrouFrappe.acquire()
+					VerrouFrappe.acquire()
+			else:
+				JeuNote(LectureNote(NotesAJouer[0]))
+			NotesAJouer.pop(0)
 		
 #Thread Metronome
 def Metronome():
 	global VerrouFrappe
 	global NotesAJouer
 	try: #Essaie d'autoriser la frappe
-		VerrouFrappe.release()
-	except ThreadError: #si la frappe était déjà autorisée, capture l'erreur
-		if NotesAJouer: #Si il y a des notes a jouer
-			print"Thread error au niveau du metronome. Tempo trop rapide ?"
+		if VerrouFrappe.locked():
+			VerrouFrappe.release()
+	except: #erreur au metronome
+		print "erreur au metronome"
 		
 class MyRepeater(object):
     def __init__(self, interval, function):#, *args, **kwargs):
         self._timer     = None
         self.interval   = interval
         self.function   = function
-        #self.args       = args
-        #self.kwargs     = kwargs
+        self.args       = None
+        self.kwargs     = None
         self.is_running = False
         self.start()
 
     def _run(self):
         self.is_running = False
         self.start()
-        self.function(*self.args, **self.kwargs)
+        self.function()#*self.args, **self.kwargs)
 
     def start(self):
         if not self.is_running:
@@ -336,7 +347,7 @@ Music= threading.Thread(target=Musicien)
 Music.start()
 
 #Lancement reseau
-Port=11000
+Port=10000
 threadres=threading.Thread(target=FuncRes, args=(Port,0))
 threadres.start()
 
@@ -344,9 +355,11 @@ while (True):
 	print("0) Commande souple d'un moteur\n")
 	print("1) Commande souple de tous les moteurs\n")
 	print("2) Commande brute de tous les moteurs\n")
-	print("3) Musiques ! (exemple)\n")
+	print("3) Pince\n")
 	print("4) Sequence exemple\n")
 	print("5) Jouer une note demandee\n")
+	print("6) PosInit\n")
+	print("7) Encoder une partition\n")
 	
 	choix=input("Votre choix ?")
 	if(choix==0):
@@ -370,28 +383,31 @@ while (True):
 		print("Mettez la baguette\n")
 		sleep(1)
 		CommandControlUnique(6,PosPivot[5])
-		sleep(1)
-		MusiqueInit()
-		print("Attente des instructions\n")
 	elif(choix==4):
 		MusiqueInit()
-		print "En position initiale"
 		JeuNote(1)
-		sleep(1)
 		JeuNote(1)
-		sleep(1)
 		JeuNote(3)
-		sleep(1)
 		JeuNote(1)
-		sleep(1)
 		JeuNote(5)
-		sleep(1)
+		JeuNote(5)
 		JeuNote(3)
-		sleep(1)
 		JeuNote(1)
 	elif(choix==5):
 		temp = input("Note a jouer ?")
 		JeuNote(temp)
+	elif(choix==6):
+		valeur=[400,450,350,450,400,400]
+		CommandControlAll(valeur)
+	elif(choix==7):
+		Part="abc"
+		print "NAJ :", NotesAJouer
+		Part = raw_input("Encode la partition (abc) :")#nb : input evalue ce qui est rentre comme un code python. Il tenterait alors d executer le string comme si c etait une commande
+		VerrouNAJ.acquire()
+		NotesAJouer=[] #On remplace les instruction musicales en cours par la partition
+		NotesAJouer.extend(Part)
+		VerrouNAJ.release()
+		print "NAJ :", NotesAJouer
 	else:
 		threadres.stop() #Faudra faire le code pour que cela se termine proprement http://python.developpez.com/faq/?page=Thread
 		Metronome.stop()
