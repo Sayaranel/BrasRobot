@@ -23,16 +23,28 @@ valeur=[0,0,0,0,0,0]
 
 Mode = 'x' #x = commande directement, y = ecriture partition
 
-#Parametres musiquaux
+#Parametres musiquaux (Moteurs a recalibrer regulierement : M1 et M3 (?)
+# PosPivot=[0,420,308,450,370,320] #Le 0 correspond a une des PosVal1
+# PosVal1=[130,0,370,0,430,0,600] #365
+# PosFrapM2=[360,0,350,0,350,0,360] #325
+# PosFrapM3=[270,0,308,0,308,0,270] 
+# PosFrapM4=[450,0,450,0,450,0,450]
+# PosFrapM5=[400,0,370,0,400,0,400]
+# PosFrapM5Dr=[400,0,335,0,350,0,400] ##Bouger 2 moteurs pour la frappe ? #345
+# PosFrapM5Ga=[400,0,405,0,435,0,400]										#
+# PosFrapM6=320
+
+#Newpos
 PosPivot=[0,420,308,450,370,320] #Le 0 correspond a une des PosVal1
-PosVal1=[130,0,370,0,430,0,600]
-PosFrapM2=[360,0,350,0,350,0,360]
-PosFrapM3=[270,0,308,0,308,0,270]
-PosFrapM4=[450,0,450,0,450,0,450]
+PosVal1=[130,0,365,0,440,0,600] #365 440
+PosFrapM2=[360,0,350,0,345,0,360] #	   345
+PosFrapM3=[270,0,325,0,330,0,270] #325 330
+PosFrapM4=[450,0,440,0,440,0,450] #	   455
 PosFrapM5=[400,0,370,0,400,0,400]
-PosFrapM5Dr=[400,0,335,0,350,0,400] ##Bouger 2 moteurs pour la frappe ?
-PosFrapM5Ga=[400,0,405,0,435,0,400]
+PosFrapM5Dr=[400,0,330,0,370,0,400] ##Bouger 2 moteurs pour la frappe ? #330 # 375
+PosFrapM5Ga=[400,0,400,0,442,0,400]										#400 #442
 PosFrapM6=320
+
 
 PeriodeTempo=2
 
@@ -304,17 +316,25 @@ def FuncRes(Port,nothing):
 					NotesAJouer.extend(Partition)
 					VerrouNAJ.release()
 					Mode = 'z'
-				elif not(data.__len__()==1):
+				elif not(data.__len__()>1):
+					print data.__len__()
 					print "Data received ", data
 				else:
 					VerrouNAJ.acquire()
 					NotesAJouer.append(data[0])
 					VerrouNAJ.release()
 			elif Mode =='y':
-				if Data[Data.__len__()-1]=='z' or Data[Data.__len__()-1]=='x':
-					NextMode=Data[Data.__len__()-1]
-					Data.pop(Data.__len__()-1)
-					Partition.extend(Data)
+				if data[data.__len__()-1-1]=='z' or data[data.__len__()-1-1]=='x':
+					datalist=list(data)
+					print "a",datalist[datalist.__len__()-1]
+					print "b",datalist[datalist.__len__()-1-1]
+					print "c",datalist[datalist.__len__()-1-1-1]
+					
+					NextMode=datalist[datalist.__len__()-1-1]
+					datalist.pop(datalist.__len__()-1)
+					datalist.pop(datalist.__len__()-1)
+					print "NextMode",NextMode
+					Partition.extend(datalist)
 					if NextMode=='z':
 						VerrouNAJ.acquire()
 						NotesAJouer=[] #On remplace les instruction musicales en cours par la partition
@@ -322,13 +342,19 @@ def FuncRes(Port,nothing):
 						VerrouNAJ.release()
 					Mode=NextMode
 				else:
-					Partition.extend(Data)
+					datalist=list(data)
+					Partition.extend(datalist)
 			elif Mode =='z':
 				if data[0]=='x' or data[0]=='y':
 					VerrouNAJ.acquire() #On interrompt la lecture
 					NotesAJouer=[]
 					VerrouNAJ.release()
 					Mode=data[0]
+				if data[0]=='y':
+					Partition=[]
+					Mode= 'y'
+				if not NotesAJouer:
+					Mode='x'
 			else:
 				Mode == 'x'
 	conn.close()
@@ -346,8 +372,8 @@ Metro= MyRepeater(PeriodeTempo, Metronome) # call myFunction every Periode Tempo
 Music= threading.Thread(target=Musicien)
 Music.start()
 
-#Lancement reseau
-Port=10000
+#Lancement reseau #Ne lit pas deux partition de suite (semble lire seulement la premiere note) # ne sort pas du mode partition si recoit une seule note ensuite (necessite 2 notes -> erreur provient de l android)
+Port=12500
 threadres=threading.Thread(target=FuncRes, args=(Port,0))
 threadres.start()
 
@@ -385,6 +411,7 @@ while (True):
 		CommandControlUnique(6,PosPivot[5])
 	elif(choix==4):
 		MusiqueInit()
+		VerrouFrappe.acquire()
 		JeuNote(1)
 		JeuNote(1)
 		JeuNote(3)
@@ -408,6 +435,11 @@ while (True):
 		NotesAJouer.extend(Part)
 		VerrouNAJ.release()
 		print "NAJ :", NotesAJouer
+		while NotesAJouer:
+			pass
+		#On remet au repos
+		valeur=[400,450,350,450,400,400]
+		CommandControlAll(valeur)
 	else:
 		threadres.stop() #Faudra faire le code pour que cela se termine proprement http://python.developpez.com/faq/?page=Thread
 		Metronome.stop()
