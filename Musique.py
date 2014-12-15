@@ -23,34 +23,22 @@ valeur=[0,0,0,0,0,0]
 
 Mode = 'x' #x = commande directement, y = ecriture partition
 
-#Parametres musiquaux (Moteurs a recalibrer regulierement : M1 et M3 (?)
-# PosPivot=[0,420,308,450,370,320] #Le 0 correspond a une des PosVal1
-# PosVal1=[130,0,370,0,430,0,600] #365
-# PosFrapM2=[360,0,350,0,350,0,360] #325
-# PosFrapM3=[270,0,308,0,308,0,270] 
-# PosFrapM4=[450,0,450,0,450,0,450]
-# PosFrapM5=[400,0,370,0,400,0,400]
-# PosFrapM5Dr=[400,0,335,0,350,0,400] ##Bouger 2 moteurs pour la frappe ? #345
-# PosFrapM5Ga=[400,0,405,0,435,0,400]										#
-# PosFrapM6=320
-
-#Newpos
-PosPivot=[0,420,308,450,370,320] #Le 0 correspond a une des PosVal1
-PosVal1=[130,0,365,0,440,0,600] #365 440
-PosFrapM2=[360,0,350,0,345,0,360] #	   345
-PosFrapM3=[270,0,325,0,330,0,270] #325 330
-PosFrapM4=[450,0,440,0,440,0,450] #	   455
-PosFrapM5=[400,0,370,0,400,0,400]
-PosFrapM5Dr=[400,0,330,0,370,0,400] ##Bouger 2 moteurs pour la frappe ? #330 # 375
-PosFrapM5Ga=[400,0,400,0,442,0,400]										#400 #442
+#2e methode de frappe
+PosFrapM1=[250,350,420,480]
+PosFrapM2=[350,340,310,300]
+PosFrapM3=[350,340,390,420]
+PosFrapM4=[430,440,440,490]
+PosFrapM5=[550,500,580,540]
 PosFrapM6=320
-
+ValFrap=[50,60,40,60]
+ValUp=[0,10,10,-10,+10,0]
+M4securite = 620
 
 PeriodeTempo=2
 
 #PosVal1 pour 4 bouteilles, si cela suit les previsions, les positions paires ne sont jamais appellees
-#		|		|		|	
-#	X	1	2	3	4	5	X
+#	  | | |
+#	0 1	2 3
 #En principe le reste du code s adapte au tableau, meme si on en change le nombre d element
 
 Partition=[]
@@ -131,11 +119,10 @@ def init(Channel,Target):
 	print "Init OK"	
 	
 #Fonctions jeu musique	
-	
-def Frappe(Pos,direction):
+
+def Frappe(Note):
 	global PosFrapM5
-	global PosFrapM5Dr
-	global PosFrapM5Ga
+	global ValFrap
 	global VerrouFrappe
 	
 	if VerrouFrappe.locked():
@@ -143,94 +130,68 @@ def Frappe(Pos,direction):
 	else: #Le else sert a couvrir le cas ou on commence a jouer afin de se mettre dans le temp (car au depart le lock sera forcement relache)
 		VerrouFrappe.acquire()
 		VerrouFrappe.acquire()
-	if direction=="gauche": ##Modif ici
-		pwm.setPWM(10,0,PosFrapM5Ga[Pos])
-	else:
-		pwm.setPWM(10,0,PosFrapM5Dr[Pos])
-	sleep(0.2) #sera adapte
-	pwm.setPWM(10,0,PosFrapM5[Pos])
+	pwm.setPWM(10,0,PosFrapM5[Note]-ValFrap[Note])
+	sleep(0.22) #sera adapte
+	pwm.setPWM(10,0,PosFrapM5[Note])
 	
-def ChgmtPos(PosCible):
+def ChgmtPos(PosInit,PosCible):
 	global Actu
-	global PosPivot
+	global PosFrapM1
 	global PosFrapM2
 	global PosFrapM3
 	global PosFrapM4
 	global PosFrapM5
-	global PosFrapM5
-	global PosFrapM5
-	global PosVal1
-	CibleAll=[Actu[0],PosPivot[1],PosPivot[2],PosPivot[3],PosPivot[4],Actu[5]]
+	global M4securite
+	
+	# if PosInit == -1:
+		# CibleAll=[Actu[0],450,350,450,400,Actu[5]]
+	# else:
+		# #CibleAll=[PosFrapM1[PosInit]+ValUp[0],PosFrapM2[PosInit]+ValUp[1],PosFrapM3[PosInit]+ValUp[2],PosFrapM4[PosInit]+ValUp[3],M4securite,Actu[5]]
+		# CibleAll=[PosFrapM1[PosInit],PosFrapM2[PosInit],PosFrapM3[PosInit],PosFrapM4[PosInit],M4securite,Actu[5]]
+	
+	# CommandControlAll(CibleAll)
+	# #CibleAll=[PosFrapM1[PosCible]+ValUp[0],PosFrapM2[PosCible]+ValUp[1],PosFrapM3[PosCible]+ValUp[2],PosFrapM4[PosCible]+ValUp[3],M4securite,Actu[5]]
+	# CibleAll=[PosFrapM1[PosCible],PosFrapM2[PosCible],PosFrapM3[PosCible],PosFrapM4[PosCible],M4securite,Actu[5]]
+	# CommandControlAll(CibleAll)
+	pwm.setPWM(10,0,M4securite)
+	pwm.setPWM(8,0,550)
+	pause()
+	CibleAll=[PosFrapM1[PosCible],PosFrapM2[PosCible],PosFrapM3[PosCible],PosFrapM4[PosCible],M4securite,Actu[5]]
 	CommandControlAll(CibleAll)
-	CommandControlUnique(1,PosVal1[PosCible])
-	CibleAll=[Actu[0],PosFrapM2[PosCible],PosFrapM3[PosCible],PosFrapM4[PosCible],PosFrapM5[PosCible],Actu[5]]
-	CommandControlAll(CibleAll)
+	pwm.setPWM(10,0,PosFrapM5[PosCible])
+	Actu[4]=PosFrapM5[PosCible]
 
 def JeuNote(Note):
-	global PosVal1
+	global PosFrapM1
 	global Actu
+	PreviousNote = -1
 	
-	if Note==1:
-		if Actu[0]==PosVal1[2]:
-			print "Frappe a gauche"
-			Frappe(2,"gauche")
-		else:
-			print "Changement de position"
-			ChgmtPos(2)
-			print "Frappe a gauche"
-			Frappe(2,"gauche")
-	elif Note==PosVal1.__len__()-2:
-		if Actu[0]==PosVal1[PosVal1.__len__()-3]:
-			print "Deja en position"
-			print "Frappe a droite"
-			Frappe(PosVal1.__len__()-3,"droite")
-		else:
-			print "Changement de position"
-			ChgmtPos(PosVal1.__len__()-3)
-			print "Frappe a droite"
-			Frappe(PosVal1.__len__()-3,"droite")	
-	elif Actu[0]==PosVal1[Note-1]:
-		print "Deja en position"
-		print "Frappe a droite"
-		Frappe(Note-1,"droite")
-	elif Actu[0]==PosVal1[Note+1]:
-		print "Deja en position"
-		print "Frappe a gauche"
-		Frappe(Note+1,"gauche")
-	elif Actu[0]<PosVal1[Note-1]:
-		print "Changement de position"
-		ChgmtPos(Note-1)
-		print "Frappe a droite"
-		Frappe(Note-1,"droite")
-	elif Actu[0]<PosVal1[Note-1]: #on respectera Actu[0]>PosVal1[Note-1] ou alors on sera dans une postion absurbe qui de toute facon tolere les commandes qui suivent
-		print "Changement de position"
-		ChgmtPos(Note+1)
-		print "Frappe a gauche"
-		Frappe(Note+1,"gauche")
-
-def MusiqueInit():
-	global PosPivot
-	global PosVal1
-	global Actu
+	for i in range (0,PosFrapM1.__len__()):
+		if Actu[0]==PosFrapM1[i]:
+			PreviousNote = i
 	
-	CibleAll=[Actu[0],450,350,450,Actu[4],Actu[5]]
-	CommandControlAll(CibleAll)
-	CibleAll=[360,PosPivot[1],PosPivot[2],PosPivot[3],PosPivot[4],Actu[5]]
-	CommandControlAll(CibleAll)
-
+	if Note < PosFrapM1.__len__() and Note >= 0:
+		if PreviousNote == Note:
+			pass
+		else:
+			ChgmtPos(PreviousNote,Note)
+		Frappe(Note)
+	else:
+		print "Note incorrecte"
 	
 #Thread Musicien	
 def LectureNote(Lettre):
 	if Lettre=='a' :
-		NumNote=1
+		return 1
 	elif Lettre=='b' :
-		NumNote=3
+		return 2
 	elif Lettre=='c' :
-		NumNote=5
+		return 3
+	elif Lettre=='d' :
+		return 0
 	else:
 		print "Probleme de lecture d une note par le musicien"
-		NumNote=1
-	return NumNote
+		return 0
 
 def Musicien(): ##Tourne en boucle la fonction jeu note en fonction du mode
 	global Mode
@@ -374,8 +335,8 @@ Music.start()
 
 #Lancement reseau #Ne lit pas deux partition de suite (semble lire seulement la premiere note) # ne sort pas du mode partition si recoit une seule note ensuite (necessite 2 notes -> erreur provient de l android)
 Port=12500
-threadres=threading.Thread(target=FuncRes, args=(Port,0))
-threadres.start()
+#threadres=threading.Thread(target=FuncRes, args=(Port,0))
+#threadres.start()
 
 while (True):
 	print("0) Commande souple d'un moteur\n")
@@ -408,9 +369,8 @@ while (True):
 		CommandControlUnique(6,ServoMax[5])
 		print("Mettez la baguette\n")
 		sleep(1)
-		CommandControlUnique(6,PosPivot[5])
+		CommandControlUnique(6,PosFrapM6)
 	elif(choix==4):
-		MusiqueInit()
 		VerrouFrappe.acquire()
 		JeuNote(1)
 		JeuNote(1)
