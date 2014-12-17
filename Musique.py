@@ -52,7 +52,7 @@ VerrouFrappe = threading.Lock()
 def pause():
   sleep(0.01)
 
-def Vitesse(Dep, Act, Cib, LastInc, MaxInc):
+def Vitesse(Dep, Act, Cib, LastInc):
 	Inc = 0
 	if(Act!=Cib):
 		if(Dep<Cib):
@@ -81,12 +81,10 @@ def CommandControlAll(Target):
 	Dep=[Actu[0],Actu[1],Actu[2],Actu[3],Actu[4],Actu[5]]
 	Inc=[0,0,0,0,0,0]
 	MaxInc=[10,10,10,10,10,10]
-	for i in range(0,6):
-		print "ActuAvtTest%d %d TrgtAvtTest%d %d" %(i,Actu[i],i,Target[i])
-	while Actu!=Target:#TestEgList(Actu,Target,6)==False): #Actu==Target marche ptet
+	while Actu!=Target:
 		print "Pas egal"
 		for i in range(0,6):
-			Inc[i]=Vitesse(Dep[i],Actu[i],Target[i],Inc[i],MaxInc[i])
+			Inc[i]=Vitesse(Dep[i],Actu[i],Target[i],Inc[i])
 			if Inc<0:
 				Actu[i]=Actu[i]+max(Inc[i],-MaxInc[i])
 			else:
@@ -103,13 +101,12 @@ def CommandControlUnique(Moteur,Cible):
 	Inc=0
 	MaxInc=10
 	while(Actu[Moteur-1]!=Cible):
-		Inc=Vitesse(Dep,Actu[Moteur-1],Cible,Inc,MaxInc)
+		Inc=Vitesse(Dep,Actu[Moteur-1],Cible,Inc)
 		if Inc<0:
 			Actu[Moteur-1]=Actu[Moteur-1]+max(Inc,-MaxInc)
 		else:
 			Actu[Moteur-1]=Actu[Moteur-1]+min(Inc,MaxInc)
 		pwm.setPWM(channel[Moteur-1],0,Actu[Moteur-1])
-		#print "Actu %d" %Actu
 		pause()
 	print "Target reach"
 
